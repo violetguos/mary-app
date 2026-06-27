@@ -4,7 +4,7 @@ import {gql} from '@apollo/client';
 import {useQuery, useMutation} from '@apollo/client/react';
 import {
   Box, Typography, Avatar, Chip, Button, CircularProgress, Alert,
-  Grid, Paper, Card, CardContent, Snackbar,
+  Card, CardContent, Snackbar,
 } from '@mui/material';
 import {useAuth} from '../lib/auth';
 
@@ -68,7 +68,13 @@ function isPastDate(date: Date) {
   return d < today;
 }
 
-function MonthCalendar({selectedDate, onSelect}: {selectedDate: Date | null; onSelect: (d: Date) => void}) {
+function isToday(date: Date) {
+  return formatDate(date) === formatDate(new Date());
+}
+
+function CalendarView({selectedDate, onDateSelect, slots, selectedSlot, onSlotSelect, loading, serviceDuration}:
+  {selectedDate: Date | null; onDateSelect: (d: Date) => void; slots: any[]; selectedSlot: string | null; onSlotSelect: (s: string | null) => void; loading: boolean; serviceDuration: number}) {
+
   const today = new Date();
   const [viewMonth, setViewMonth] = useState(today.getMonth());
   const [viewYear, setViewYear] = useState(today.getFullYear());
@@ -78,65 +84,124 @@ function MonthCalendar({selectedDate, onSelect}: {selectedDate: Date | null; onS
   const startPad = firstDay.getDay();
   const daysInMonth = lastDay.getDate();
 
-  const prevMonth = () => {
-    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
-    else { setViewMonth(m => m - 1); }
-  };
-
-  const nextMonth = () => {
-    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
-    else { setViewMonth(m => m + 1); }
-  };
-
   const cells: (number | null)[] = [];
   for (let i = 0; i < startPad; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
   return (
     <Box>
-      <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
-        <Button size="small" onClick={prevMonth} sx={{minWidth: 36, p: 0.5}}>&lt;</Button>
-        <Typography variant="subtitle1" fontWeight={600}>
+      {/* Month grid */}
+      <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2}}>
+        <Button size="small" onClick={() => {
+          if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
+          else { setViewMonth(m => m - 1); }
+        }} sx={{minWidth: 32, p: 0.5, fontSize: 18}}>&lt;</Button>
+        <Typography variant="h6" sx={{fontWeight: 600}}>
           {MONTH_NAMES[viewMonth]} {viewYear}
         </Typography>
-        <Button size="small" onClick={nextMonth} sx={{minWidth: 36, p: 0.5}}>&gt;</Button>
+        <Button size="small" onClick={() => {
+          if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
+          else { setViewMonth(m => m + 1); }
+        }} sx={{minWidth: 32, p: 0.5, fontSize: 18}}>&gt;</Button>
       </Box>
-      <Grid container spacing={0.5}>
+
+      <Box sx={{display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1, mb: 1}}>
         {DAY_NAMES.map(d => (
-          <Grid item key={d} xs={12 / 7}>
-            <Typography variant="caption" textAlign="center" display="block" color="text.secondary" fontWeight={600}>
-              {d}
-            </Typography>
-          </Grid>
+          <Typography key={d} variant="caption" align="center" sx={{fontSize: 13, fontWeight: 700}} color="text.secondary">
+            {d}
+          </Typography>
         ))}
+      </Box>
+      <Box sx={{display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1.2, mb: 3}}>
         {cells.map((day, i) => {
-          if (day === null) return <Grid item key={`pad-${i}`} xs={12 / 7} />;
+          if (day === null) return <Box key={`pad-${i}`} />;
           const date = new Date(viewYear, viewMonth, day);
           const disabled = isPastDate(date) || isWeekend(date);
           const selected = selectedDate && formatDate(selectedDate) === formatDate(date);
+          const todayHighlight = isToday(date) && !selected;
           return (
-            <Grid item key={`day-${day}`} xs={12 / 7}>
-              <Button
-                fullWidth
-                disabled={disabled}
-                variant={selected ? 'contained' : 'text'}
-                onClick={() => onSelect(date)}
-                sx={{
-                  minWidth: 32, minHeight: 36, p: 0,
-                  textTransform: 'none', fontWeight: selected ? 700 : 400,
-                  fontSize: '0.875rem',
-                  color: disabled ? 'grey.400' : selected ? 'white' : 'text.primary',
-                  bgcolor: selected ? 'primary.main' : 'transparent',
-                  '&:hover': disabled ? {} : {bgcolor: selected ? 'primary.dark' : 'primary.50'},
-                  borderRadius: '50%',
-                }}
-              >
-                {day}
-              </Button>
-            </Grid>
+            <Button
+              key={`day-${day}`}
+              disabled={disabled}
+              variant={selected ? 'contained' : 'text'}
+              onClick={() => onDateSelect(date)}
+              sx={{
+                minWidth: 0, minHeight: 48, p: 0,
+                textTransform: 'none', fontWeight: selected ? 700 : todayHighlight ? 700 : 500,
+                fontSize: '1rem',
+                color: disabled ? 'grey.300' : selected ? 'white' : 'text.primary',
+                bgcolor: selected ? 'primary.main' : todayHighlight ? 'primary.50' : 'transparent',
+                borderRadius: 1,
+                '&:hover': disabled ? {} : {bgcolor: selected ? 'primary.dark' : 'primary.100'},
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}
+            >
+              {day}
+            </Button>
           );
         })}
-      </Grid>
+      </Box>
+
+      {/* Day schedule */}
+      {selectedDate && (
+        <>
+          <Box sx={{borderTop: 1, borderColor: 'divider', pt: 2, mb: 2}}>
+            <Typography variant="subtitle1" sx={{fontWeight: 600}}>
+              {DAY_NAMES[selectedDate.getDay()]}, {MONTH_NAMES[selectedDate.getMonth()]} {selectedDate.getDate()}
+            </Typography>
+          </Box>
+
+          {loading ? (
+            <Box sx={{display: 'flex', justifyContent: 'center', py: 4}}><CircularProgress size={28} /></Box>
+          ) : slots.length === 0 ? (
+            <Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center', py: 6}}>
+              <Typography variant="body2" color="text.secondary">No available slots for this day</Typography>
+            </Box>
+          ) : (
+            <Box>
+              {slots.map((slot: any) => {
+                const time = formatTime(slot.startAt);
+                const isSelected = selectedSlot === slot.startAt;
+                return (
+                  <Box
+                    key={slot.startAt}
+                    onClick={() => { if (slot.available) onSlotSelect(isSelected ? null : slot.startAt); }}
+                    sx={{
+                      display: 'flex', alignItems: 'center', gap: 2.5, px: 3, py: 1.5,
+                      cursor: slot.available ? 'pointer' : 'default',
+                      bgcolor: isSelected ? 'primary.main' : slot.available ? 'transparent' : 'grey.50',
+                      color: isSelected ? 'white' : slot.available ? 'text.primary' : 'grey.400',
+                      borderRadius: 1,
+                      borderBottom: '1px solid',
+                      borderColor: 'grey.100',
+                      transition: 'all 0.12s',
+                      '&:hover': slot.available && !isSelected ? {bgcolor: 'primary.50'} : {},
+                    }}
+                  >
+                    <Typography variant="body1" sx={{fontWeight: 700, width: 88, flexShrink: 0}}>
+                      {time}
+                    </Typography>
+                    <Box
+                      sx={{
+                        flex: 1, height: 40, borderRadius: 1,
+                        bgcolor: isSelected ? 'rgba(255,255,255,0.2)' : (slot.available ? 'primary.100' : 'grey.200'),
+                        display: 'flex', alignItems: 'center', px: 2.5,
+                      }}
+                    >
+                      <Typography variant="body2" sx={{fontWeight: 600}}>
+                        {slot.available ? (isSelected ? 'Selected' : 'Available') : 'Unavailable'}
+                      </Typography>
+                    </Box>
+                    <Typography variant="body2" color={isSelected ? 'rgba(255,255,255,0.7)' : 'text.secondary'} sx={{width: 64, textAlign: 'right', flexShrink: 0}}>
+                      {serviceDuration}min
+                    </Typography>
+                  </Box>
+                );
+              })}
+            </Box>
+          )}
+        </>
+      )}
     </Box>
   );
 }
@@ -162,8 +227,8 @@ function BookPage() {
   });
 
   const practitioners = pracData?.practitioners || [];
-
   const selectedPractitioner = practitioners.find((p: any) => p.id === selectedPractitionerId);
+  const selectedServiceObj = selectedPractitioner?.services?.find((s: any) => s.id === selectedServiceId);
 
   const {data: slotsData, loading: loadingSlots} = useQuery(SLOTS_QUERY, {
     variables: {
@@ -199,20 +264,26 @@ function BookPage() {
   };
 
   return (
-    <Box display="flex" height="100vh">
-      {/* Left sidebar — practitioner list */}
-      <Box width="25%" minWidth={280} sx={{borderRight: 1, borderColor: 'divider', overflowY: 'auto', p: 2}}>
-        <Typography variant="h6" fontWeight={600} mb={2}>Practitioners</Typography>
-        {loadingPractitioners && <CircularProgress size={24} />}
-        {pracError && <Alert severity="error" sx={{mb: 1}}>Failed to load</Alert>}
+    <div style={{display: 'flex', flexDirection: 'row', flexWrap: 'nowrap', alignItems: 'stretch', width: '100%', minHeight: '100vh', backgroundColor: '#f5f5f5'}}>
+      {/* Left column — practitioner + services */}
+      <div style={{flex: '0 0 20%', minWidth: '20%', maxWidth: '20%', borderRight: '1px solid rgba(0,0,0,0.12)', backgroundColor: '#fff', display: 'flex', flexDirection: 'column', minHeight: '100vh', overflowY: 'auto', boxSizing: 'border-box'}}>
+        <Box sx={{p: 2, borderBottom: 1, borderColor: 'divider'}}>
+          <Typography variant="h6" sx={{fontWeight: 600}}>Practitioners</Typography>
+        </Box>
+
+        {loadingPractitioners && (
+          <Box sx={{display: 'flex', justifyContent: 'center', py: 4}}><CircularProgress size={24} /></Box>
+        )}
+        {pracError && <Alert severity="error" sx={{m: 2}}>Failed to load</Alert>}
+
         {practitioners.map((p: any) => (
           <Card
             key={p.id}
             variant="outlined"
             sx={{
-              mb: 1.5, cursor: 'pointer', transition: 'all 0.15s',
-              borderColor: selectedPractitionerId === p.id ? 'primary.main' : undefined,
-              bgcolor: selectedPractitionerId === p.id ? 'primary.50' : undefined,
+              mx: 1.5, my: 1, cursor: 'pointer', transition: 'all 0.12s',
+              borderColor: selectedPractitionerId === p.id ? 'primary.main' : 'grey.200',
+              bgcolor: selectedPractitionerId === p.id ? 'primary.50' : 'white',
               '&:hover': {borderColor: 'primary.light'},
             }}
             onClick={() => {
@@ -223,135 +294,103 @@ function BookPage() {
             }}
           >
             <CardContent sx={{p: 1.5, '&:last-child': {pb: 1.5}}}>
-              <Box display="flex" gap={1.5} alignItems="flex-start">
-                <Avatar src={p.photoUrl} alt={p.user.email} sx={{width: 48, height: 48}} />
-                <Box flex={1} minWidth={0}>
-                  <Typography variant="subtitle2" fontWeight={600} noWrap>{p.user.email.split('@')[0]}</Typography>
+              <Box sx={{display: 'flex', gap: 1.5, alignItems: 'flex-start'}}>
+                <Avatar src={p.photoUrl} alt={p.user.email} sx={{width: 44, height: 44}} />
+                <Box sx={{flex: 1, minWidth: 0}}>
+                  <Typography variant="subtitle2" noWrap sx={{fontWeight: 600, fontSize: 13}}>
+                    {p.user.email.split('@')[0]}
+                  </Typography>
                   <Typography variant="caption" color="text.secondary" sx={{
                     display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                    fontSize: 11,
                   }}>{p.bio}</Typography>
                   {p.yearsExperience && (
-                    <Typography variant="caption" color="text.secondary" display="block">
+                    <Typography variant="caption" color="text.secondary" sx={{display: 'block', fontSize: 11}}>
                       {p.yearsExperience} yr{p.yearsExperience !== 1 ? 's' : ''} exp
                     </Typography>
                   )}
-                  <Box display="flex" flexWrap="wrap" gap={0.5} mt={0.5}>
-                    {p.services.map((s: any) => (
-                      <Chip key={s.id} label={s.name} size="small" variant="outlined" />
-                    ))}
-                  </Box>
                 </Box>
               </Box>
             </CardContent>
           </Card>
         ))}
-      </Box>
 
-      {/* Right panel — booking flow */}
-      <Box flex={1} p={3} sx={{overflowY: 'auto'}}>
-        {!selectedPractitioner ? (
-          <Box display="flex" justifyContent="center" alignItems="center" height="100%">
-            <Typography variant="h6" color="text.secondary">Select a practitioner to book</Typography>
-          </Box>
-        ) : (
-          <>
-            <Typography variant="h5" fontWeight={600} mb={3}>
-              Book with {selectedPractitioner.user.email.split('@')[0]}
+        {/* Service selector — shown below selected practitioner */}
+        {selectedPractitioner && (
+          <Box sx={{p: 2, borderTop: 1, borderColor: 'divider'}}>
+            <Typography variant="overline" color="text.secondary" sx={{fontWeight: 600, fontSize: 11}}>
+              SERVICES
             </Typography>
-
-            {/* Service selector */}
-            <Typography variant="subtitle1" fontWeight={600} mb={1}>Service</Typography>
-            <Box display="flex" flexWrap="wrap" gap={1} mb={3}>
+            <Box sx={{display: 'flex', flexDirection: 'column', gap: 0.5, mt: 1}}>
               {selectedPractitioner.services.map((s: any) => (
                 <Chip
                   key={s.id}
-                  label={`${s.name} — $${(s.priceCents / 100).toFixed(2)} (${s.durationMinutes} min)`}
+                  label={`${s.name} · ${s.durationMinutes}min`}
                   color={selectedServiceId === s.id ? 'primary' : 'default'}
                   variant={selectedServiceId === s.id ? 'filled' : 'outlined'}
+                  size="small"
                   onClick={() => {
                     setSelectedServiceId(s.id);
                     setSelectedDate(null);
                     setSelectedSlot(null);
                   }}
-                  sx={{cursor: 'pointer'}}
+                  sx={{cursor: 'pointer', justifyContent: 'flex-start', width: '100%'}}
                 />
               ))}
             </Box>
-
-            {selectedServiceId && (
-              <>
-                {/* Date picker — month calendar */}
-                <Typography variant="subtitle1" fontWeight={600} mb={1}>Date</Typography>
-                <Box mb={3}>
-                  <MonthCalendar
-                    selectedDate={selectedDate}
-                    onSelect={(d) => { setSelectedDate(d); setSelectedSlot(null); }}
-                  />
-                </Box>
-
-                {/* Time slots */}
-                {selectedDate && (
-                  <>
-                    <Typography variant="subtitle1" fontWeight={600} mb={1}>Time</Typography>
-                    {loadingSlots ? (
-                      <CircularProgress size={24} />
-                    ) : (
-                      <Grid container spacing={1}>
-                        {(slotsData?.availableSlots || []).map((slot: any) => (
-                          <Grid item key={slot.startAt}>
-                            <Button
-                              variant={selectedSlot === slot.startAt ? 'contained' : 'outlined'}
-                              color={slot.available ? 'primary' : 'inherit'}
-                              disabled={!slot.available}
-                              onClick={() => setSelectedSlot(slot.available ? slot.startAt : null)}
-                              sx={{
-                                textTransform: 'none', minWidth: 90,
-                                bgcolor: slot.available
-                                  ? (selectedSlot === slot.startAt ? 'primary.main' : 'primary.50')
-                                  : 'grey.200',
-                                color: slot.available
-                                  ? (selectedSlot === slot.startAt ? 'white' : 'primary.main')
-                                  : 'grey.500',
-                                borderColor: slot.available ? 'primary.main' : 'grey.300',
-                                '&:hover': slot.available ? {} : {bgcolor: 'grey.200'},
-                              }}
-                            >
-                              {formatTime(slot.startAt)}
-                            </Button>
-                          </Grid>
-                        ))}
-                        {slotsData?.availableSlots?.length === 0 && (
-                          <Typography variant="body2" color="text.secondary" p={2}>No available slots for this day</Typography>
-                        )}
-                      </Grid>
-                    )}
-
-                    {selectedSlot && (
-                      <Button
-                        variant="contained"
-                        size="large"
-                        onClick={handleBook}
-                        disabled={booking}
-                        sx={{mt: 3, textTransform: 'none'}}
-                      >
-                        {booking ? 'Booking...' : `Confirm booking — ${formatTime(selectedSlot)}`}
-                      </Button>
-                    )}
-                  </>
-                )}
-              </>
-            )}
-          </>
+          </Box>
         )}
-      </Box>
+      </div>
 
-      <Snackbar
-        open={!!snackbar}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar(null)}
-        message={snackbar}
-        anchorOrigin={{vertical: 'bottom', horizontal: 'center'}}
-      />
-    </Box>
-  );
-}
+      {/* Right column — calendar view */}
+      <div style={{flex: 1, minWidth: 0, minHeight: '100vh', overflowY: 'auto', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '24px', borderLeft: '2px solid #f50057'}}>
+        {!selectedPractitioner ? (
+          <Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', width: '100%'}}>
+            <Typography variant="h6" color="text.secondary" sx={{fontWeight: 400}}>
+              Select a practitioner
+            </Typography>
+          </Box>
+        ) : !selectedServiceId ? (
+          <Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', width: '100%'}}>
+            <Typography variant="h6" color="text.secondary" sx={{fontWeight: 400}}>
+              Select a service
+            </Typography>
+          </Box>
+        ) : (
+          <div style={{padding: '32px', width: '100%', maxWidth: 980, margin: '0 auto', backgroundColor: '#fff', borderRadius: 16, boxShadow: '0 12px 30px rgba(0,0,0,0.08)'}}>
+            <CalendarView
+              selectedDate={selectedDate}
+              onDateSelect={(d) => { setSelectedDate(d); setSelectedSlot(null); }}
+              slots={slotsData?.availableSlots || []}
+              selectedSlot={selectedSlot}
+              onSlotSelect={setSelectedSlot}
+              loading={loadingSlots}
+              serviceDuration={selectedServiceObj?.durationMinutes || 0}
+            />
+
+            {selectedSlot && (
+              <Box sx={{display: 'flex', justifyContent: 'center', mt: 4}}>
+                <Button
+                  variant="contained"
+                  size="large"
+                  onClick={handleBook}
+                  disabled={booking}
+                  sx={{textTransform: 'none', px: 6, py: 1.5, fontSize: 16}}
+                >
+                  {booking ? 'Booking...' : `Confirm — ${formatTime(selectedSlot)}`}
+                </Button>
+              </Box>
+            )}
+            </div>          )}
+        </div>
+
+        <Snackbar
+          open={!!snackbar}
+          autoHideDuration={4000}
+          onClose={() => setSnackbar(null)}
+          message={snackbar}
+          anchorOrigin={{vertical: 'bottom', horizontal: 'center'}}
+        />
+      </div>
+    );
+  }
