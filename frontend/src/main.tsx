@@ -1,7 +1,7 @@
 import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import {RouterProvider, createRouter} from '@tanstack/react-router';
-import {ApolloProvider} from '@apollo/client';
+import {ApolloProvider} from '@apollo/client/react';
 import {ThemeProvider, createTheme, CssBaseline} from '@mui/material';
 import '@fontsource/inter/400.css';
 import '@fontsource/inter/500.css';
