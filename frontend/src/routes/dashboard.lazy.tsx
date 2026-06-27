@@ -1,5 +1,6 @@
 import {createLazyFileRoute, useNavigate} from '@tanstack/react-router';
-import {gql, useQuery} from '@apollo/client';
+import {gql} from '@apollo/client';
+import {useQuery} from '@apollo/client/react';
 import {Box, Typography, Card, CardContent, Chip, Button, CircularProgress, Alert, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper as MuiPaper} from '@mui/material';
 import {useAuth} from '../lib/auth';
 
