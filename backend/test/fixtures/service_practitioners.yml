@@ -1,0 +1,7 @@
+sarah_rmt:
+  practitioner_profile: sarah
+  service: rmt
+
+marcus_physio:
+  practitioner_profile: marcus
+  service: physio_assessment

@@ -1,0 +1,13 @@
+sarah:
+  user: sarah
+  clinic: default
+  bio: Registered massage therapist with 8 years of experience.
+  photo_url: https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop
+  years_experience: 8
+
+marcus:
+  user: marcus
+  clinic: default
+  bio: Physiotherapist focused on rehabilitation and recovery.
+  photo_url: https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=400&fit=crop
+  years_experience: 12

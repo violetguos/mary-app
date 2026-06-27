@@ -45,17 +45,7 @@ const BOOK_MUTATION = gql`
 `;
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-function getNextDays(n: number) {
-  const days = [];
-  for (let i = 0; i < n; i++) {
-    const d = new Date();
-    d.setDate(d.getDate() + i);
-    days.push(d);
-  }
-  return days;
-}
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 function formatDate(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -64,6 +54,91 @@ function formatDate(date: Date) {
 function formatTime(iso: string) {
   const d = new Date(iso);
   return d.toLocaleTimeString('en-US', {hour: 'numeric', minute: '2-digit'});
+}
+
+function isWeekend(date: Date) {
+  return date.getDay() === 0 || date.getDay() === 6;
+}
+
+function isPastDate(date: Date) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d < today;
+}
+
+function MonthCalendar({selectedDate, onSelect}: {selectedDate: Date | null; onSelect: (d: Date) => void}) {
+  const today = new Date();
+  const [viewMonth, setViewMonth] = useState(today.getMonth());
+  const [viewYear, setViewYear] = useState(today.getFullYear());
+
+  const firstDay = new Date(viewYear, viewMonth, 1);
+  const lastDay = new Date(viewYear, viewMonth + 1, 0);
+  const startPad = firstDay.getDay();
+  const daysInMonth = lastDay.getDate();
+
+  const prevMonth = () => {
+    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
+    else { setViewMonth(m => m - 1); }
+  };
+
+  const nextMonth = () => {
+    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
+    else { setViewMonth(m => m + 1); }
+  };
+
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < startPad; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  return (
+    <Box>
+      <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+        <Button size="small" onClick={prevMonth} sx={{minWidth: 36, p: 0.5}}>&lt;</Button>
+        <Typography variant="subtitle1" fontWeight={600}>
+          {MONTH_NAMES[viewMonth]} {viewYear}
+        </Typography>
+        <Button size="small" onClick={nextMonth} sx={{minWidth: 36, p: 0.5}}>&gt;</Button>
+      </Box>
+      <Grid container spacing={0.5}>
+        {DAY_NAMES.map(d => (
+          <Grid item key={d} xs={12 / 7}>
+            <Typography variant="caption" textAlign="center" display="block" color="text.secondary" fontWeight={600}>
+              {d}
+            </Typography>
+          </Grid>
+        ))}
+        {cells.map((day, i) => {
+          if (day === null) return <Grid item key={`pad-${i}`} xs={12 / 7} />;
+          const date = new Date(viewYear, viewMonth, day);
+          const disabled = isPastDate(date) || isWeekend(date);
+          const selected = selectedDate && formatDate(selectedDate) === formatDate(date);
+          return (
+            <Grid item key={`day-${day}`} xs={12 / 7}>
+              <Button
+                fullWidth
+                disabled={disabled}
+                variant={selected ? 'contained' : 'text'}
+                onClick={() => onSelect(date)}
+                sx={{
+                  minWidth: 32, minHeight: 36, p: 0,
+                  textTransform: 'none', fontWeight: selected ? 700 : 400,
+                  fontSize: '0.875rem',
+                  color: disabled ? 'grey.400' : selected ? 'white' : 'text.primary',
+                  bgcolor: selected ? 'primary.main' : 'transparent',
+                  '&:hover': disabled ? {} : {bgcolor: selected ? 'primary.dark' : 'primary.50'},
+                  borderRadius: '50%',
+                }}
+              >
+                {day}
+              </Button>
+            </Grid>
+          );
+        })}
+      </Grid>
+    </Box>
+  );
 }
 
 function BookPage() {
@@ -205,33 +280,13 @@ function BookPage() {
 
             {selectedServiceId && (
               <>
-                {/* Date picker */}
+                {/* Date picker — month calendar */}
                 <Typography variant="subtitle1" fontWeight={600} mb={1}>Date</Typography>
-                <Box display="flex" gap={1} mb={3} flexWrap="wrap">
-                  {getNextDays(14).map((d) => {
-                    const isWeekend = d.getDay() === 0 || d.getDay() === 6;
-                    const dateStr = formatDate(d);
-                    const isSelected = selectedDate && formatDate(selectedDate) === dateStr;
-                    return (
-                      <Button
-                        key={dateStr}
-                        variant={isSelected ? 'contained' : 'outlined'}
-                        disabled={isWeekend}
-                        onClick={() => {
-                          setSelectedDate(d);
-                          setSelectedSlot(null);
-                        }}
-                        sx={{textTransform: 'none', minWidth: 80}}
-                        size="small"
-                      >
-                        <Box textAlign="center">
-                          <Typography variant="caption" display="block">{DAY_NAMES[d.getDay()]}</Typography>
-                          <Typography variant="body2" fontWeight={600}>{d.getDate()}</Typography>
-                          <Typography variant="caption" display="block">{MONTH_NAMES[d.getMonth()]}</Typography>
-                        </Box>
-                      </Button>
-                    );
-                  })}
+                <Box mb={3}>
+                  <MonthCalendar
+                    selectedDate={selectedDate}
+                    onSelect={(d) => { setSelectedDate(d); setSelectedSlot(null); }}
+                  />
                 </Box>
 
                 {/* Time slots */}
