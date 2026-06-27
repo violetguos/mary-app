@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2025_06_01_000012) do
+ActiveRecord::Schema[8.1].define(version: 2025_06_02_000003) do
   create_table "appointments", force: :cascade do |t|
     t.string "cancellation_reason"
     t.datetime "cancelled_at"
@@ -134,6 +134,18 @@ ActiveRecord::Schema[8.1].define(version: 2025_06_01_000012) do
     t.index ["patient_id"], name: "index_payments_on_patient_id"
   end
 
+  create_table "practitioner_profiles", force: :cascade do |t|
+    t.text "bio"
+    t.integer "clinic_id", null: false
+    t.datetime "created_at", null: false
+    t.string "photo_url"
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.integer "years_experience"
+    t.index ["clinic_id"], name: "index_practitioner_profiles_on_clinic_id"
+    t.index ["user_id"], name: "index_practitioner_profiles_on_user_id"
+  end
+
   create_table "receipts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "issued_at"
@@ -142,6 +154,27 @@ ActiveRecord::Schema[8.1].define(version: 2025_06_01_000012) do
     t.datetime "updated_at", null: false
     t.index ["payment_id"], name: "index_receipts_on_payment_id"
     t.index ["receipt_number"], name: "index_receipts_on_receipt_number", unique: true
+  end
+
+  create_table "schedule_availabilities", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "day_of_week", null: false
+    t.time "end_time", null: false
+    t.integer "practitioner_profile_id", null: false
+    t.time "start_time", null: false
+    t.datetime "updated_at", null: false
+    t.index ["day_of_week"], name: "index_schedule_availabilities_on_day_of_week"
+    t.index ["practitioner_profile_id"], name: "index_schedule_availabilities_on_practitioner_profile_id"
+  end
+
+  create_table "service_practitioners", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "practitioner_profile_id", null: false
+    t.integer "service_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["practitioner_profile_id"], name: "index_service_practitioners_on_practitioner_profile_id"
+    t.index ["service_id", "practitioner_profile_id"], name: "idx_service_practitioners_unique", unique: true
+    t.index ["service_id"], name: "index_service_practitioners_on_service_id"
   end
 
   create_table "services", force: :cascade do |t|
@@ -182,6 +215,11 @@ ActiveRecord::Schema[8.1].define(version: 2025_06_01_000012) do
   add_foreign_key "patient_profiles", "users"
   add_foreign_key "payments", "appointments"
   add_foreign_key "payments", "users", column: "patient_id"
+  add_foreign_key "practitioner_profiles", "clinics"
+  add_foreign_key "practitioner_profiles", "users"
   add_foreign_key "receipts", "payments"
+  add_foreign_key "schedule_availabilities", "practitioner_profiles"
+  add_foreign_key "service_practitioners", "practitioner_profiles"
+  add_foreign_key "service_practitioners", "services"
   add_foreign_key "services", "clinics"
 end
