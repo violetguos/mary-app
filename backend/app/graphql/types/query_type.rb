@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 module Types
   class QueryType < Types::BaseObject
     field :node, Types::NodeType, null: true, description: "Fetches an object given its ID." do
@@ -18,14 +16,30 @@ module Types
       ids.map { |id| context.schema.object_from_id(id, context) }
     end
 
-    # Add root-level fields here.
-    # They will be entry points for queries on your schema.
+    field :me, Types::UserType, null: true
 
-    # TODO: remove me
-    field :test_field, String, null: false,
-      description: "An example field added by the generator"
-    def test_field
-      "Hello World!"
+    def me
+      context[:current_user]
+    end
+
+    field :clinics, [Types::ClinicType], null: false
+
+    def clinics
+      Clinic.all
+    end
+
+    field :clinic, Types::ClinicType, null: true do
+      argument :id, ID, required: true
+    end
+
+    def clinic(id:)
+      Clinic.find_by(id: id)
+    end
+
+    field :services, [Types::ServiceType], null: false
+
+    def services
+      Service.all
     end
   end
 end
