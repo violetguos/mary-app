@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {type ReactNode, useState} from 'react';
 import {createLazyFileRoute, useNavigate} from '@tanstack/react-router';
 import {gql} from '@apollo/client';
 import {useQuery, useMutation} from '@apollo/client/react';
@@ -47,6 +47,15 @@ const BOOK_MUTATION = gql`
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
+type PractitionerSummary = {
+  id: string;
+  user: {email: string};
+  bio: string;
+  photoUrl?: string | null;
+  yearsExperience?: number;
+  services: Array<{id: string; name: string; durationMinutes: number}>;
+};
+
 function formatDate(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
@@ -72,6 +81,163 @@ function isToday(date: Date) {
   return formatDate(date) === formatDate(new Date());
 }
 
+function BookingLayout({sidebar, content}: {sidebar: ReactNode; content: ReactNode}) {
+  return (
+    <Box sx={{display: 'flex', flexDirection: {xs: 'column', md: 'row'}, width: '100%', minHeight: '100vh', bgcolor: '#f5f5f5'}}>
+      <Box sx={{
+        flex: {xs: '0 0 auto', md: '0 0 20%'},
+        width: {xs: '100%', md: '20%'},
+        minWidth: {xs: '100%', md: '20%'},
+        maxWidth: {xs: '100%', md: '20%'},
+        borderRight: {md: '1px solid rgba(0,0,0,0.12)'},
+        borderBottom: {xs: '1px solid rgba(0,0,0,0.12)', md: 0},
+        bgcolor: 'white',
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: {xs: 'auto', md: '100vh'},
+        overflowY: 'auto',
+        boxSizing: 'border-box',
+      }}>
+        {sidebar}
+      </Box>
+
+      <Box sx={{flex: 1, minWidth: 0, minHeight: '100vh', overflowY: 'auto', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', p: {xs: 2, md: 3}}}>
+        {content}
+      </Box>
+    </Box>
+  );
+}
+
+function BookingEmptyState({message}: {message: string}) {
+  return (
+    <Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', minHeight: '50vh'}}>
+      <Typography variant="h6" color="text.secondary" sx={{fontWeight: 400}}>
+        {message}
+      </Typography>
+    </Box>
+  );
+}
+
+function BookingPanel({children}: {children: ReactNode}) {
+  return (
+    <Box sx={{width: '100%', maxWidth: 980, p: {xs: 2, md: 4}, bgcolor: 'white', borderRadius: 3, boxShadow: '0 12px 30px rgba(0,0,0,0.08)'}}>
+      {children}
+    </Box>
+  );
+}
+
+function BookingPrimaryButton({children, loading, onClick}: {children: ReactNode; loading: boolean; onClick: () => void}) {
+  return (
+    <Button
+      variant="contained"
+      size="large"
+      onClick={onClick}
+      disabled={loading}
+      sx={{textTransform: 'none', px: 6, py: 1.5, fontSize: 16}}
+    >
+      {children}
+    </Button>
+  );
+}
+
+function PractitionerCard({practitioner, selected, onSelect}: {practitioner: PractitionerSummary; selected: boolean; onSelect: () => void}) {
+  return (
+    <Card
+      variant="outlined"
+      sx={{
+        mx: 1.5, my: 1, cursor: 'pointer', transition: 'all 0.12s',
+        borderColor: selected ? 'primary.main' : 'grey.200',
+        bgcolor: selected ? 'primary.50' : 'white',
+        '&:hover': {borderColor: 'primary.light'},
+      }}
+      onClick={onSelect}
+    >
+      <CardContent sx={{p: 1.5, '&:last-child': {pb: 1.5}}}>
+        <Box sx={{display: 'flex', gap: 1.5, alignItems: 'flex-start'}}>
+          <Avatar src={practitioner.photoUrl ?? undefined} alt={practitioner.user.email} sx={{width: 44, height: 44}} />
+          <Box sx={{flex: 1, minWidth: 0}}>
+            <Typography variant="subtitle2" noWrap sx={{fontWeight: 600, fontSize: 13}}>
+              {practitioner.user.email.split('@')[0]}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{
+              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+              fontSize: 11,
+            }}>{practitioner.bio}</Typography>
+            {practitioner.yearsExperience && (
+              <Typography variant="caption" color="text.secondary" sx={{display: 'block', fontSize: 11}}>
+                {practitioner.yearsExperience} yr{practitioner.yearsExperience !== 1 ? 's' : ''} exp
+              </Typography>
+            )}
+          </Box>
+        </Box>
+      </CardContent>
+    </Card>
+  );
+}
+
+function BookingSidebar({
+  loading,
+  error,
+  practitioners,
+  selectedPractitioner,
+  selectedPractitionerId,
+  selectedServiceId,
+  onSelectPractitioner,
+  onSelectService,
+}: {
+  loading: boolean;
+  error?: Error | null;
+  practitioners: PractitionerSummary[];
+  selectedPractitioner?: PractitionerSummary;
+  selectedPractitionerId: string | null;
+  selectedServiceId: string | null;
+  onSelectPractitioner: (id: string) => void;
+  onSelectService: (id: string) => void;
+}) {
+  return (
+    <>
+      <Box sx={{p: 2, borderBottom: 1, borderColor: 'divider'}}>
+        <Typography variant="h6" sx={{fontWeight: 600}}>Practitioners</Typography>
+      </Box>
+
+      {loading && (
+        <Box sx={{display: 'flex', justifyContent: 'center', py: 4}}><CircularProgress size={24} /></Box>
+      )}
+      {error && <Alert severity="error" sx={{m: 2}}>Failed to load</Alert>}
+
+      {practitioners.map((practitioner) => (
+        <PractitionerCard
+          key={practitioner.id}
+          practitioner={practitioner}
+          selected={selectedPractitionerId === practitioner.id}
+          onSelect={() => onSelectPractitioner(practitioner.id)}
+        />
+      ))}
+
+      {selectedPractitioner && (
+        <Box sx={{p: 2, borderTop: 1, borderColor: 'divider'}}>
+          <Typography variant="overline" color="text.secondary" sx={{fontWeight: 600, fontSize: 11}}>
+            SERVICES
+          </Typography>
+          <Box sx={{display: 'flex', flexDirection: 'column', gap: 0.5, mt: 1}}>
+            {selectedPractitioner.services.map((service) => (
+              <Chip
+                key={service.id}
+                label={`${service.name} · ${service.durationMinutes}min`}
+                color={selectedServiceId === service.id ? 'primary' : 'default'}
+                variant={selectedServiceId === service.id ? 'filled' : 'outlined'}
+                size="small"
+                onClick={() => onSelectService(service.id)}
+                sx={{cursor: 'pointer', justifyContent: 'flex-start', width: '100%'}}
+              />
+            ))}
+          </Box>
+        </Box>
+      )}
+    </>
+  );
+}
+
 function CalendarView({selectedDate, onDateSelect, slots, selectedSlot, onSlotSelect, loading, serviceDuration}:
   {selectedDate: Date | null; onDateSelect: (d: Date) => void; slots: any[]; selectedSlot: string | null; onSlotSelect: (s: string | null) => void; loading: boolean; serviceDuration: number}) {
 
@@ -90,7 +256,6 @@ function CalendarView({selectedDate, onDateSelect, slots, selectedSlot, onSlotSe
 
   return (
     <Box>
-      {/* Month grid */}
       <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2}}>
         <Button size="small" onClick={() => {
           if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
@@ -106,9 +271,9 @@ function CalendarView({selectedDate, onDateSelect, slots, selectedSlot, onSlotSe
       </Box>
 
       <Box sx={{display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1, mb: 1}}>
-        {DAY_NAMES.map(d => (
-          <Typography key={d} variant="caption" align="center" sx={{fontSize: 13, fontWeight: 700}} color="text.secondary">
-            {d}
+        {DAY_NAMES.map((day) => (
+          <Typography key={day} variant="caption" align="center" sx={{fontSize: 13, fontWeight: 700}} color="text.secondary">
+            {day}
           </Typography>
         ))}
       </Box>
@@ -133,7 +298,7 @@ function CalendarView({selectedDate, onDateSelect, slots, selectedSlot, onSlotSe
                 bgcolor: selected ? 'primary.main' : todayHighlight ? 'primary.50' : 'transparent',
                 borderRadius: 1,
                 '&:hover': disabled ? {} : {bgcolor: selected ? 'primary.dark' : 'primary.100'},
-                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
             >
               {day}
@@ -142,7 +307,6 @@ function CalendarView({selectedDate, onDateSelect, slots, selectedSlot, onSlotSe
         })}
       </Box>
 
-      {/* Day schedule */}
       {selectedDate && (
         <>
           <Box sx={{borderTop: 1, borderColor: 'divider', pt: 2, mb: 2}}>
@@ -264,133 +428,65 @@ function BookPage() {
   };
 
   return (
-    <div style={{display: 'flex', flexDirection: 'row', flexWrap: 'nowrap', alignItems: 'stretch', width: '100%', minHeight: '100vh', backgroundColor: '#f5f5f5'}}>
-      {/* Left column — practitioner + services */}
-      <div style={{flex: '0 0 20%', minWidth: '20%', maxWidth: '20%', borderRight: '1px solid rgba(0,0,0,0.12)', backgroundColor: '#fff', display: 'flex', flexDirection: 'column', minHeight: '100vh', overflowY: 'auto', boxSizing: 'border-box'}}>
-        <Box sx={{p: 2, borderBottom: 1, borderColor: 'divider'}}>
-          <Typography variant="h6" sx={{fontWeight: 600}}>Practitioners</Typography>
-        </Box>
-
-        {loadingPractitioners && (
-          <Box sx={{display: 'flex', justifyContent: 'center', py: 4}}><CircularProgress size={24} /></Box>
-        )}
-        {pracError && <Alert severity="error" sx={{m: 2}}>Failed to load</Alert>}
-
-        {practitioners.map((p: any) => (
-          <Card
-            key={p.id}
-            variant="outlined"
-            sx={{
-              mx: 1.5, my: 1, cursor: 'pointer', transition: 'all 0.12s',
-              borderColor: selectedPractitionerId === p.id ? 'primary.main' : 'grey.200',
-              bgcolor: selectedPractitionerId === p.id ? 'primary.50' : 'white',
-              '&:hover': {borderColor: 'primary.light'},
-            }}
-            onClick={() => {
-              setSelectedPractitionerId(p.id);
-              setSelectedServiceId(null);
-              setSelectedDate(null);
-              setSelectedSlot(null);
-            }}
-          >
-            <CardContent sx={{p: 1.5, '&:last-child': {pb: 1.5}}}>
-              <Box sx={{display: 'flex', gap: 1.5, alignItems: 'flex-start'}}>
-                <Avatar src={p.photoUrl} alt={p.user.email} sx={{width: 44, height: 44}} />
-                <Box sx={{flex: 1, minWidth: 0}}>
-                  <Typography variant="subtitle2" noWrap sx={{fontWeight: 600, fontSize: 13}}>
-                    {p.user.email.split('@')[0]}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{
-                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                    fontSize: 11,
-                  }}>{p.bio}</Typography>
-                  {p.yearsExperience && (
-                    <Typography variant="caption" color="text.secondary" sx={{display: 'block', fontSize: 11}}>
-                      {p.yearsExperience} yr{p.yearsExperience !== 1 ? 's' : ''} exp
-                    </Typography>
-                  )}
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        ))}
-
-        {/* Service selector — shown below selected practitioner */}
-        {selectedPractitioner && (
-          <Box sx={{p: 2, borderTop: 1, borderColor: 'divider'}}>
-            <Typography variant="overline" color="text.secondary" sx={{fontWeight: 600, fontSize: 11}}>
-              SERVICES
-            </Typography>
-            <Box sx={{display: 'flex', flexDirection: 'column', gap: 0.5, mt: 1}}>
-              {selectedPractitioner.services.map((s: any) => (
-                <Chip
-                  key={s.id}
-                  label={`${s.name} · ${s.durationMinutes}min`}
-                  color={selectedServiceId === s.id ? 'primary' : 'default'}
-                  variant={selectedServiceId === s.id ? 'filled' : 'outlined'}
-                  size="small"
-                  onClick={() => {
-                    setSelectedServiceId(s.id);
-                    setSelectedDate(null);
-                    setSelectedSlot(null);
-                  }}
-                  sx={{cursor: 'pointer', justifyContent: 'flex-start', width: '100%'}}
-                />
-              ))}
-            </Box>
-          </Box>
-        )}
-      </div>
-
-      {/* Right column — calendar view */}
-      <div style={{flex: 1, minWidth: 0, minHeight: '100vh', overflowY: 'auto', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '24px', borderLeft: '2px solid #f50057'}}>
-        {!selectedPractitioner ? (
-          <Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', width: '100%'}}>
-            <Typography variant="h6" color="text.secondary" sx={{fontWeight: 400}}>
-              Select a practitioner
-            </Typography>
-          </Box>
-        ) : !selectedServiceId ? (
-          <Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', width: '100%'}}>
-            <Typography variant="h6" color="text.secondary" sx={{fontWeight: 400}}>
-              Select a service
-            </Typography>
-          </Box>
-        ) : (
-          <div style={{padding: '32px', width: '100%', maxWidth: 980, margin: '0 auto', backgroundColor: '#fff', borderRadius: 16, boxShadow: '0 12px 30px rgba(0,0,0,0.08)'}}>
-            <CalendarView
-              selectedDate={selectedDate}
-              onDateSelect={(d) => { setSelectedDate(d); setSelectedSlot(null); }}
-              slots={slotsData?.availableSlots || []}
-              selectedSlot={selectedSlot}
-              onSlotSelect={setSelectedSlot}
-              loading={loadingSlots}
-              serviceDuration={selectedServiceObj?.durationMinutes || 0}
-            />
-
-            {selectedSlot && (
-              <Box sx={{display: 'flex', justifyContent: 'center', mt: 4}}>
-                <Button
-                  variant="contained"
-                  size="large"
-                  onClick={handleBook}
-                  disabled={booking}
-                  sx={{textTransform: 'none', px: 6, py: 1.5, fontSize: 16}}
-                >
-                  {booking ? 'Booking...' : `Confirm — ${formatTime(selectedSlot)}`}
-                </Button>
-              </Box>
-            )}
-            </div>          )}
-        </div>
-
-        <Snackbar
-          open={!!snackbar}
-          autoHideDuration={4000}
-          onClose={() => setSnackbar(null)}
-          message={snackbar}
-          anchorOrigin={{vertical: 'bottom', horizontal: 'center'}}
+    <BookingLayout
+      sidebar={(
+        <BookingSidebar
+          loading={loadingPractitioners}
+          error={pracError}
+          practitioners={practitioners}
+          selectedPractitioner={selectedPractitioner}
+          selectedPractitionerId={selectedPractitionerId}
+          selectedServiceId={selectedServiceId}
+          onSelectPractitioner={(id) => {
+            setSelectedPractitionerId(id);
+            setSelectedServiceId(null);
+            setSelectedDate(null);
+            setSelectedSlot(null);
+          }}
+          onSelectService={(id) => {
+            setSelectedServiceId(id);
+            setSelectedDate(null);
+            setSelectedSlot(null);
+          }}
         />
-      </div>
-    );
-  }
+      )}
+      content={(
+        <>
+          {!selectedPractitioner ? (
+            <BookingEmptyState message="Select a practitioner" />
+          ) : !selectedServiceId ? (
+            <BookingEmptyState message="Select a service" />
+          ) : (
+            <BookingPanel>
+              <CalendarView
+                selectedDate={selectedDate}
+                onDateSelect={(date) => { setSelectedDate(date); setSelectedSlot(null); }}
+                slots={slotsData?.availableSlots || []}
+                selectedSlot={selectedSlot}
+                onSlotSelect={setSelectedSlot}
+                loading={loadingSlots}
+                serviceDuration={selectedServiceObj?.durationMinutes || 0}
+              />
+
+              {selectedSlot && (
+                <Box sx={{display: 'flex', justifyContent: 'center', mt: 4}}>
+                  <BookingPrimaryButton loading={booking} onClick={handleBook}>
+                    {booking ? 'Booking...' : `Confirm — ${formatTime(selectedSlot)}`}
+                  </BookingPrimaryButton>
+                </Box>
+              )}
+            </BookingPanel>
+          )}
+
+          <Snackbar
+            open={!!snackbar}
+            autoHideDuration={4000}
+            onClose={() => setSnackbar(null)}
+            message={snackbar}
+            anchorOrigin={{vertical: 'bottom', horizontal: 'center'}}
+          />
+        </>
+      )}
+    />
+  );
+}
