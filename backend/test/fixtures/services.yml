@@ -1,0 +1,13 @@
+rmt:
+  clinic: default
+  name: Registered Massage Therapy
+  duration_minutes: 60
+  price_cents: 12000
+  category: rmt
+
+physio_assessment:
+  clinic: default
+  name: Physiotherapy Assessment
+  duration_minutes: 45
+  price_cents: 10000
+  category: physio

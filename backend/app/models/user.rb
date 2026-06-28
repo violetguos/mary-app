@@ -4,6 +4,7 @@ class User < ApplicationRecord
 
   has_one :patient_profile, dependent: :destroy
   has_one :clinic_staff, dependent: :destroy
+  has_one :practitioner_profile, dependent: :destroy
 
   has_many :appointments_as_patient, class_name: "Appointment", foreign_key: :patient_id, dependent: :destroy
   has_many :appointments_as_staff, class_name: "Appointment", foreign_key: :staff_id, dependent: :nullify
@@ -13,7 +14,7 @@ class User < ApplicationRecord
 
   validates :email, presence: true, uniqueness: true,
             format: { with: URI::MailTo::EMAIL_REGEXP }
-  validates :role, presence: true, inclusion: { in: %w[patient clinic_admin super_admin] }
+  validates :role, presence: true, inclusion: { in: %w[patient clinic_admin practitioner super_admin] }
 
   def patient?
     role == "patient"
@@ -21,5 +22,9 @@ class User < ApplicationRecord
 
   def clinic_admin?
     role == "clinic_admin"
+  end
+
+  def practitioner?
+    role == "practitioner"
   end
 end

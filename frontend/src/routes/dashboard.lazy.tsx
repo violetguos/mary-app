@@ -50,6 +50,7 @@ function DashboardPage() {
         <Typography variant="h4" fontWeight={600}>{clinic?.name || 'Dashboard'}</Typography>
         <Box display="flex" alignItems="center" gap={2}>
           <Typography variant="body2" color="text.secondary">{user?.email}</Typography>
+          <Button variant="contained" size="small" onClick={() => navigate({to: '/book'})} sx={{textTransform: 'none'}}>Book appointment</Button>
           <Button variant="outlined" size="small" onClick={handleLogout} sx={{textTransform: 'none'}}>Sign out</Button>
         </Box>
       </Box>

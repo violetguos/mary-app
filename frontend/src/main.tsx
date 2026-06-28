@@ -22,6 +22,9 @@ declare module '@tanstack/react-router' {
 
 const theme = createTheme({
   typography: {fontFamily: '"Inter", system-ui, sans-serif'},
+  palette: {
+    primary: {main: '#00C1CA'},
+  },
 });
 
 createRoot(document.getElementById('root')!).render(

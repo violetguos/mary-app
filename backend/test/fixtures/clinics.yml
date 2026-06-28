@@ -1,0 +1,6 @@
+default:
+  name: Mary Wellness Clinic
+  subdomain: mary
+  address: 123 Main Street, Toronto, ON
+  phone: "(416) 555-0123"
+  email: hello@marywellness.com

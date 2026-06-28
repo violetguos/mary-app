@@ -1,0 +1,59 @@
+sarah_mon:
+  practitioner_profile: sarah
+  day_of_week: 1
+  start_time: '2000-01-01 09:00:00'
+  end_time: '2000-01-01 17:00:00'
+
+sarah_tue:
+  practitioner_profile: sarah
+  day_of_week: 2
+  start_time: '2000-01-01 09:00:00'
+  end_time: '2000-01-01 17:00:00'
+
+sarah_wed:
+  practitioner_profile: sarah
+  day_of_week: 3
+  start_time: '2000-01-01 09:00:00'
+  end_time: '2000-01-01 17:00:00'
+
+sarah_thu:
+  practitioner_profile: sarah
+  day_of_week: 4
+  start_time: '2000-01-01 09:00:00'
+  end_time: '2000-01-01 17:00:00'
+
+sarah_fri:
+  practitioner_profile: sarah
+  day_of_week: 5
+  start_time: '2000-01-01 09:00:00'
+  end_time: '2000-01-01 17:00:00'
+
+marcus_mon:
+  practitioner_profile: marcus
+  day_of_week: 1
+  start_time: '2000-01-01 09:00:00'
+  end_time: '2000-01-01 17:00:00'
+
+marcus_tue:
+  practitioner_profile: marcus
+  day_of_week: 2
+  start_time: '2000-01-01 09:00:00'
+  end_time: '2000-01-01 17:00:00'
+
+marcus_wed:
+  practitioner_profile: marcus
+  day_of_week: 3
+  start_time: '2000-01-01 09:00:00'
+  end_time: '2000-01-01 17:00:00'
+
+marcus_thu:
+  practitioner_profile: marcus
+  day_of_week: 4
+  start_time: '2000-01-01 09:00:00'
+  end_time: '2000-01-01 17:00:00'
+
+marcus_fri:
+  practitioner_profile: marcus
+  day_of_week: 5
+  start_time: '2000-01-01 09:00:00'
+  end_time: '2000-01-01 17:00:00'

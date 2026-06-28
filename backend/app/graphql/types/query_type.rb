@@ -41,5 +41,30 @@ module Types
     def services
       Service.all
     end
+
+    field :practitioners, [Types::PractitionerProfileType], null: false do
+      argument :clinic_id, ID, required: true
+    end
+
+    def practitioners(clinic_id:)
+      PractitionerProfile.where(clinic_id: clinic_id).includes(:user, :services, :schedule_availabilities)
+    end
+
+    field :available_slots, [Types::TimeSlotType], null: false do
+      argument :practitioner_profile_id, ID, required: true
+      argument :service_id, ID, required: true
+      argument :date, GraphQL::Types::ISO8601Date, required: true
+    end
+
+    def available_slots(practitioner_profile_id:, service_id:, date:)
+      practitioner = PractitionerProfile.find(practitioner_profile_id)
+      service = Service.find(service_id)
+
+      SlotService.available_slots(
+        practitioner_profile: practitioner,
+        service: service,
+        date: date,
+      )
+    end
   end
 end
