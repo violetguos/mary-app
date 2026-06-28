@@ -222,7 +222,7 @@ function BookPage() {
     return null;
   }
 
-  const {loading: loadingPractitioners, error: pracError, data: pracData} = useQuery(PRACTITIONERS_QUERY, {
+  const {loading: loadingPractitioners, error: pracError, data: pracData} = useQuery<{practitioners: any[]}>(PRACTITIONERS_QUERY, {
     variables: {clinicId},
   });
 
@@ -230,7 +230,7 @@ function BookPage() {
   const selectedPractitioner = practitioners.find((p: any) => p.id === selectedPractitionerId);
   const selectedServiceObj = selectedPractitioner?.services?.find((s: any) => s.id === selectedServiceId);
 
-  const {data: slotsData, loading: loadingSlots} = useQuery(SLOTS_QUERY, {
+  const {data: slotsData, loading: loadingSlots} = useQuery<{availableSlots: any[]}>(SLOTS_QUERY, {
     variables: {
       practitionerProfileId: selectedPractitionerId,
       serviceId: selectedServiceId,
@@ -239,7 +239,7 @@ function BookPage() {
     skip: !selectedPractitionerId || !selectedServiceId || !selectedDate,
   });
 
-  const [bookAppointment, {loading: booking}] = useMutation(BOOK_MUTATION);
+  const [bookAppointment, {loading: booking}] = useMutation<{bookAppointment: {appointment?: {id: string; startsAt: string}; errors?: string[]}}>(BOOK_MUTATION);
 
   const handleBook = async () => {
     if (!selectedSlot || !selectedPractitionerId || !selectedServiceId) return;
