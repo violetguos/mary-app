@@ -99,6 +99,69 @@ module Mutations
       assert_equal "cancelled", data["appointment"]["status"]
     end
 
+    test "cancelled_at is set to current time" do
+      travel_to Time.zone.parse("2026-06-29 10:00:00") do
+        appointment = create_appointment(starts_at: 30.hours.from_now)
+        before = Time.current
+        result = execute_cancel(appointment: appointment, user: @patient)
+        after = Time.current
+        data = result["data"]["cancelAppointment"]
+
+        cancelled_at = Time.zone.parse(data["appointment"]["cancelledAt"])
+        assert cancelled_at >= before && cancelled_at <= after,
+          "expected cancelled_at (#{cancelled_at}) to be between #{before} and #{after}"
+      end
+    end
+
+    test "cancelled_by_id is set to the requesting user" do
+      travel_to Time.zone.parse("2026-06-29 10:00:00") do
+        appointment = create_appointment(starts_at: 30.hours.from_now)
+        result = execute_cancel(appointment: appointment, user: @patient)
+        appointment.reload
+        assert_equal @patient.id, appointment.cancelled_by_id
+      end
+    end
+
+    test "cancelled_at remains nil before cancellation" do
+      appointment = create_appointment(starts_at: 30.hours.from_now)
+      assert_nil appointment.cancelled_at
+    end
+
+    test "cancelled_at and cancelled_by_id persist in the database" do
+      travel_to Time.zone.parse("2026-06-29 10:00:00") do
+        appointment = create_appointment(starts_at: 30.hours.from_now)
+        execute_cancel(appointment: appointment, user: @patient)
+        appointment.reload
+
+        assert_equal "cancelled", appointment.status
+        assert_not_nil appointment.cancelled_at
+        assert_equal @patient.id, appointment.cancelled_by_id
+      end
+    end
+
+    test "rejects cancellation exactly at the window boundary" do
+      travel_to Time.zone.parse("2026-06-29 10:00:00") do
+        appointment = create_appointment(starts_at: 23.5.hours.from_now)
+        result = execute_cancel(appointment: appointment, user: @patient)
+        data = result["data"]["cancelAppointment"]
+        assert data["errors"].any? { |e| e.include?("24 hour") }
+      end
+    end
+
+    test "allows cancellation just outside the window boundary" do
+      travel_to Time.zone.parse("2026-06-29 10:00:00") do
+        appointment = create_appointment(starts_at: 24.5.hours.from_now)
+        result = execute_cancel(appointment: appointment, user: @patient)
+        data = result["data"]["cancelAppointment"]
+        assert_equal [], data["errors"]
+        assert_equal "cancelled", data["appointment"]["status"]
+      end
+    end
+
+    test "cancelled_by_id differs from patient_id when another actor cancels" do
+      skip "admin-initiated cancellation not yet implemented"
+    end
+
     test "returns error for non-existent appointment" do
       result = BackendSchema.execute(<<~GRAPHQL, context: { current_user: @patient }, variables: { appointmentId: "999999" })
         mutation CancelAppointment($appointmentId: ID!) {
