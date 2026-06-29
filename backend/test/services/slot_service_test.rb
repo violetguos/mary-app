@@ -2,9 +2,14 @@ require "test_helper"
 
 class SlotServiceTest < ActiveSupport::TestCase
   setup do
+    travel_to Time.zone.parse("2026-06-29 06:00")
     @clinic = clinics(:default)
     @service = services(:rmt)
     @practitioner = practitioner_profiles(:sarah)
+  end
+
+  teardown do
+    travel_back
   end
 
   test "generates slots only on scheduled days" do

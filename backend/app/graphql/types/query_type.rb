@@ -50,6 +50,14 @@ module Types
       PractitionerProfile.where(clinic_id: clinic_id).includes(:user, :services, :schedule_availabilities)
     end
 
+    field :my_appointments, [Types::AppointmentType], null: false
+
+    def my_appointments
+      user = context[:current_user]
+      return [] unless user
+      Appointment.where(patient_id: user.id).includes(:clinic, :service, :staff).order(starts_at: :desc)
+    end
+
     field :available_slots, [Types::TimeSlotType], null: false do
       argument :practitioner_profile_id, ID, required: true
       argument :service_id, ID, required: true

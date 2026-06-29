@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2025_06_02_000003) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_29_164451) do
   create_table "appointments", force: :cascade do |t|
     t.string "cancellation_reason"
     t.datetime "cancelled_at"
@@ -60,6 +60,7 @@ ActiveRecord::Schema[8.1].define(version: 2025_06_02_000003) do
 
   create_table "clinics", force: :cascade do |t|
     t.string "address"
+    t.integer "cancellation_window_hours", default: 24, null: false
     t.datetime "created_at", null: false
     t.string "email"
     t.string "name", null: false

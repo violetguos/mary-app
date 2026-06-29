@@ -4,3 +4,4 @@ default:
   address: 123 Main Street, Toronto, ON
   phone: "(416) 555-0123"
   email: hello@marywellness.com
+  cancellation_window_hours: 24

@@ -7,6 +7,7 @@ module Types
     field :phone, String, null: true
     field :email, String, null: true
     field :services, [Types::ServiceType], null: false
+    field :cancellation_window_hours, Integer, null: false
     field :created_at, GraphQL::Types::ISO8601DateTime, null: false
   end
 end
