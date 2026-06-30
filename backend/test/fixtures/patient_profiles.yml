@@ -1,0 +1,10 @@
+patient_one:
+  user: patient
+  clinic: default
+  first_name: Jamie
+  last_name: Chen
+  phone: "(416) 555-9876"
+  date_of_birth: 1992-05-14
+  insurer: SunLife
+  plan_number: PL-12345
+  member_id: MEM-001

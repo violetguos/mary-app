@@ -6,5 +6,7 @@ module Types
     field :book_appointment, mutation: Mutations::BookAppointment
     field :cancel_appointment, mutation: Mutations::CancelAppointment
     field :update_clinic, mutation: Mutations::UpdateClinic
+    field :process_payment, mutation: Mutations::ProcessPayment
+    field :update_patient_insurance, mutation: Mutations::UpdatePatientInsurance
   end
 end

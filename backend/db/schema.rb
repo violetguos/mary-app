@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_29_164451) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_30_180121) do
   create_table "appointments", force: :cascade do |t|
     t.string "cancellation_reason"
     t.datetime "cancelled_at"
@@ -113,8 +113,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_164451) do
     t.string "credit_card_token"
     t.date "date_of_birth"
     t.string "first_name", null: false
+    t.string "insurer"
     t.string "last_name", null: false
+    t.string "member_id"
     t.string "phone"
+    t.string "plan_number"
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
     t.index ["clinic_id"], name: "index_patient_profiles_on_clinic_id"

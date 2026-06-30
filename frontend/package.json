@@ -16,6 +16,8 @@
     "@fontsource/inter": "^5.2.8",
     "@mui/icons-material": "^9.1.1",
     "@mui/material": "^9.1.2",
+    "@stripe/react-stripe-js": "^6.6.0",
+    "@stripe/stripe-js": "^9.8.0",
     "@tanstack/react-router": "^1.170.16",
     "@tanstack/router-devtools": "^1.167.0",
     "graphql": "^16.14.2",

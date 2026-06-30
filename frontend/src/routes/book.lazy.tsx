@@ -6,6 +6,7 @@ import {
   Box, Typography, Avatar, Chip, Button, CircularProgress, Alert,
   Card, CardContent, Snackbar,
 } from '@mui/material';
+import StripePaymentForm from '../components/StripePaymentForm';
 import {useAuth} from '../lib/auth';
 
 export const Route = createLazyFileRoute('/book')({
@@ -379,12 +380,9 @@ function BookPage() {
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [bookedAppointment, setBookedAppointment] = useState<{id: string; startsAt: string} | null>(null);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
-
-  if (!isAuthenticated) {
-    navigate({to: '/login'});
-    return null;
-  }
 
   const {loading: loadingPractitioners, error: pracError, data: pracData} = useQuery<{practitioners: any[]}>(PRACTITIONERS_QUERY, {
     variables: {clinicId},
@@ -405,6 +403,11 @@ function BookPage() {
 
   const [bookAppointment, {loading: booking}] = useMutation<{bookAppointment: {appointment?: {id: string; startsAt: string}; errors?: string[]}}>(BOOK_MUTATION);
 
+  if (!isAuthenticated) {
+    navigate({to: '/login'});
+    return null;
+  }
+
   const handleBook = async () => {
     if (!selectedSlot || !selectedPractitionerId || !selectedServiceId) return;
     try {
@@ -419,13 +422,72 @@ function BookPage() {
       if (errors?.length) {
         setSnackbar(errors.join(', '));
       } else {
-        setSnackbar('Appointment booked!');
+        setBookedAppointment(data!.bookAppointment!.appointment!);
         setSelectedSlot(null);
       }
     } catch (e: any) {
       setSnackbar(e.message);
     }
   };
+
+  const handlePaymentComplete = () => {
+    setPaymentSuccess(true);
+  };
+
+  const handleBookAnother = () => {
+    setBookedAppointment(null);
+    setPaymentSuccess(false);
+    setSelectedDate(null);
+    setSelectedServiceId(null);
+    setSelectedPractitionerId(null);
+  };
+
+  if (paymentSuccess) {
+    return (
+      <BookingLayout
+        sidebar={<BookingSidebar loading={false} practitioners={[]} selectedPractitionerId={null} selectedServiceId={null}
+          onSelectPractitioner={() => {}} onSelectService={() => {}} />}
+        content={(
+          <BookingPanel>
+            <Box sx={{textAlign: 'center', py: 6}}>
+              <Typography variant="h5" sx={{fontWeight: 600, mb: 2}}>Payment Complete!</Typography>
+              <Typography variant="body1" color="text.secondary" sx={{mb: 4}}>
+                Your appointment has been paid and confirmed.
+              </Typography>
+              <Button variant="outlined" onClick={handleBookAnother} sx={{textTransform: 'none'}}>
+                Book Another Appointment
+              </Button>
+            </Box>
+          </BookingPanel>
+        )}
+      />
+    );
+  }
+
+  if (bookedAppointment) {
+    return (
+      <BookingLayout
+        sidebar={<BookingSidebar loading={false} practitioners={[]} selectedPractitionerId={null} selectedServiceId={null}
+          onSelectPractitioner={() => {}} onSelectService={() => {}} />}
+        content={(
+          <BookingPanel>
+            <Typography variant="h5" sx={{fontWeight: 600, mb: 1}}>Appointment Booked!</Typography>
+            <Typography variant="body1" color="text.secondary" sx={{mb: 0.5}}>
+              {formatTime(bookedAppointment.startsAt)} — {new Date(bookedAppointment.startsAt).toLocaleDateString('en-US', {weekday: 'long', month: 'long', day: 'numeric'})}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{mb: 3}}>
+              {selectedServiceObj?.name} with {selectedPractitioner?.user.email.split('@')[0]}
+            </Typography>
+            <StripePaymentForm
+              appointmentId={bookedAppointment.id}
+              amountCents={selectedServiceObj?.priceCents ?? 0}
+              onComplete={handlePaymentComplete}
+            />
+          </BookingPanel>
+        )}
+      />
+    );
+  }
 
   return (
     <BookingLayout
