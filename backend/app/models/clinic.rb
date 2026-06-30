@@ -9,4 +9,5 @@ class Clinic < ApplicationRecord
 
   validates :name, presence: true
   validates :subdomain, presence: true, uniqueness: true
+  validates :cancellation_window_hours, presence: true, numericality: { greater_than_or_equal_to: 0 }
 end
